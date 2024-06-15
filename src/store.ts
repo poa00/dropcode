@@ -5,6 +5,7 @@ import { createStore } from "solid-js/store"
 
 export interface Snippet {
   id: string
+  path: string
   name: string
   createdAt: string
   updatedAt: string
@@ -23,6 +24,7 @@ const [state, setState] = createStore<{
   ready: boolean
   app: AppData
   folder: string | null
+  folders: string[]
   snippets: Snippet[]
   isMac: boolean
   isSidebarCollapsed: boolean
@@ -32,6 +34,7 @@ const [state, setState] = createStore<{
     folders: [],
   },
   folder: null,
+  folders: [],
   snippets: [],
   isMac: /macintosh/i.test(navigator.userAgent),
   isSidebarCollapsed: false
@@ -103,6 +106,18 @@ export const actions = {
     })
     if (text) {
       const snippets = JSON.parse(text)
+      snippets.map((snippet: Snippet) => {
+        if (!snippet.path) {
+          snippet.path = '.'
+        }
+        if (!snippet.createdAt) {
+          snippet.createdAt = new Date().toISOString()
+        }
+        if (!snippet.updatedAt) {
+          snippet.updatedAt = new Date().toISOString()
+        }
+        return snippet
+      })
       setState("snippets", snippets)
     } else {
       setState("snippets", [])
@@ -123,11 +138,26 @@ export const actions = {
   createSnippet: async (snippet: Snippet, content: string) => {
     if (!state.folder) return
 
-    const filepath = await path.join(state.folder, snippet.id)
+    const filepath = await path.join(state.folder, snippet.path, snippet.id)
     await fs.writeTextFile(filepath, content)
     const snippets = [...state.snippets, snippet]
     await writeSnippetsJson(state.folder, snippets)
     setState("snippets", snippets)
+  },
+
+  createFolder: async (folder: string) => {
+    if (!state.folder) return
+
+    const filepath = await path.join(state.folder, folder)
+
+    const exists = await pathExists(filepath)
+
+    if (exists) {
+      await dialog.message("Folder already exists")
+      return
+    }
+
+    await fs.createDir(filepath, { recursive: true })
   },
 
   getRandomId: () => {
@@ -160,10 +190,10 @@ export const actions = {
     await actions.syncSnippetsToVscode()
   },
 
-  updateSnippetContent: async (id: string, content: string) => {
+  updateSnippetContent: async (id: string, snippetPath: string, content: string) => {
     if (!state.folder) return
 
-    await fs.writeTextFile(await path.join(state.folder, id), content)
+    await fs.writeTextFile(await path.join(state.folder, snippetPath, id), content)
     await actions.updateSnippet(id, "updatedAt", new Date().toISOString())
   },
 
@@ -189,11 +219,12 @@ export const actions = {
   deleteSnippetForever: async (id: string) => {
     if (!state.folder) return
 
+    let snippet = state.snippets.find((snippet) => snippet.id === id)
     const snippets = state.snippets.filter((snippet) => {
       return id !== snippet.id
     })
     await writeSnippetsJson(state.folder, snippets)
-    await fs.removeFile(await path.join(state.folder, id))
+    await fs.removeFile(await path.join(state.folder, snippet?.path ?? '', id))
     setState("snippets", snippets)
   },
 

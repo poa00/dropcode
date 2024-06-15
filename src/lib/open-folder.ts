@@ -1,5 +1,5 @@
-import { dialog } from "@tauri-apps/api"
-import { useNavigate } from "@solidjs/router"
+import { dialog } from '@tauri-apps/api'
+import { useNavigate } from '@solidjs/router'
 
 export const useOpenFolderDialog = () => {
   const goto = useNavigate()
@@ -10,7 +10,7 @@ export const useOpenFolderDialog = () => {
       multiple: false,
     })
 
-    if (typeof folder === "string") {
+    if (typeof folder === 'string') {
       goto(`/snippets?${new URLSearchParams({ folder }).toString()}`)
     }
   }

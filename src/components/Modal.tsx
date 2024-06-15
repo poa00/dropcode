@@ -232,6 +232,57 @@ export const FolderHistoryModal = (props: {
   )
 }
 
+
+export const CreateFolderModal = (props: {
+  open: boolean
+  save: (name: string) => any
+  close: () => void
+}) => {
+  const closeModal = () => {
+    props.close()
+  }
+
+  const [getName, setName] = createSignal("")
+
+  const onSubmit = async (e: SubmitEvent) => {
+    e.preventDefault()
+    await props.save(getName())
+    closeModal()
+  }
+
+  return (
+    <Show when={props.open}>
+      <Modal close={closeModal}>
+        <div class="p-5">
+          <div class="text-lg font-medium mb-5">
+            Create folder
+          </div>
+          <form onSubmit={onSubmit}>
+            <label>
+              <span class="block mb-1 font-medium">Folder name</span>
+              <input
+                spellcheck={false}
+                class="input w-full"
+                value={getName()}
+                onInput={(e) => setName(e.currentTarget.value)}
+              />
+            </label>
+            <div class="mt-5 space-x-2">
+              <button
+                type="submit"
+                class="cursor border bg-zinc-50 dark:bg-zinc-700 active:border-zinc-200 active:bg-zinc-200 dark:active:border-zinc-600 dark:active:bg-zinc-600 rounded-lg px-3 inline-flex h-8 items-center"
+              >
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+    </Show>
+  )
+}
+
+
 export const VSCodeSnippetSettingsModal = (props: {
   snippetId: string | undefined
   close: () => void

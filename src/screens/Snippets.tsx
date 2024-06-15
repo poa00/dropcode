@@ -10,11 +10,8 @@ import {
 } from "solid-js"
 import { confirm } from "@tauri-apps/api/dialog"
 import { Editor } from "../components/Editor"
-import {
-  FolderHistoryModal,
-  LanguageModal,
-  VSCodeSnippetSettingsModal,
-} from "../components/Modal"
+import { FolderHistoryModal, LanguageModal,  CreateFolderModal,
+  VSCodeSnippetSettingsModal } from '../components/Modal';
 import { getLanguageName, languages } from "../lib/languages"
 import { debounce } from "../lib/utils"
 import { actions, state } from "../store"
@@ -38,6 +35,7 @@ export const Snippets = () => {
   const [getSelectedSnippetIds, setSelectedSnippetIds] = createSignal<string[]>(
     []
   )
+  const [getCreateFolderModalOpen, setCreateFolderModalOpen] = createSignal(false)
   const [getOpenVSCodeSnippetSettingsModal, setOpenVSCodeSnippetSettingsModal] =
     createSignal<string | undefined>()
 
@@ -101,6 +99,7 @@ export const Snippets = () => {
     await actions.createSnippet(
       {
         id,
+        path: ".",
         name: "Untitled",
         createdAt: d.toISOString(),
         updatedAt: d.toISOString(),
@@ -112,10 +111,15 @@ export const Snippets = () => {
     goto(`/snippets?${new URLSearchParams({ ...searchParams, id }).toString()}`)
   }
 
+  const newFolder = async (name: string) => {
+    const folder = await actions.createFolder(name)
+    // goto(`/snippets?${new URLSearchParams({ folder }).toString()}`)
+  }
+
   const handleEditorChange = debounce((value: string) => {
     if (value === content()) return
     console.log("saving content..")
-    actions.updateSnippetContent(snippet()!.id, value)
+    actions.updateSnippetContent(snippet()!.id, snippet()!.path, value)
     setContent(value)
   }, 250)
 
@@ -280,12 +284,29 @@ export const Snippets = () => {
                 {state.folder?.split(path.sep).pop()}
               </Button>
               <div class="flex items-center">
-                <Button
-                  type="button"
-                  icon="i-ic:outline-add"
-                  onClick={newSnippet}
-                  tooltip={{ content: "New snippet" }}
-                ></Button>
+                <div class="group relative">
+                  <Button icon="i-ic:outline-add"></Button>
+                  <div
+                    aria-label="Dropdown"
+                    class="hidden absolute bg-white dark:bg-zinc-700 z-10 py-1 right-0 min-w-[100px] border rounded-lg shadow group-hover:block"
+                  >
+                    <button
+                      type="button"
+                      class="cursor w-full px-3 h-6 flex items-center whitespace-nowrap hover:bg-zinc-100 dark:hover:text-white dark:hover:bg-zinc-500"
+                      onClick={newSnippet}
+                    >
+                      New Snippet
+                    </button>
+                    <button
+                      type="button"
+                      class="cursor w-full px-3 h-6 flex items-center whitespace-nowrap hover:bg-zinc-100 dark:hover:text-white dark:hover:bg-zinc-500"
+                      onClick={() => setCreateFolderModalOpen(true)}
+                    >
+                      New Folder
+                    </button>
+
+                  </div>
+                </div>
                 <Button
                   type="button"
                   icon="i-material-symbols:search"
@@ -535,6 +556,11 @@ export const Snippets = () => {
         setLanguage={(language) =>
           actions.updateSnippet(snippet()!.id, "language", language)
         }
+      />
+      <CreateFolderModal
+        close={() => setCreateFolderModalOpen(false)}
+        open={getCreateFolderModalOpen()}
+        save={newFolder}
       />
       <FolderHistoryModal
         open={getOpenFolderHistoryModal()}
